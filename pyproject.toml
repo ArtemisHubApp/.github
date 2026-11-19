@@ -13,3 +13,8 @@ line-length = 120
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["scripts"]
+
+[tool.pyright]
+extraPaths = ["scripts"]
+venvPath = "."
+venv = ".venv"

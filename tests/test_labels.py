@@ -121,6 +121,20 @@ def test_main_continua_quando_um_repo_falha(capsys):
     assert "ERRO ArtemisHubApp/artemishub_docs: HTTP 403" in capsys.readouterr().err
 
 
+def test_resposta_invalida_do_gh_vira_erro_do_repo(capsys):
+    class GhInvalido(FakeGh):
+        def __call__(self, args):
+            if args[:2] == ["label", "list"] and args[args.index("-R") + 1] == "ArtemisHubApp/artemishub_docs":
+                self.chamadas.append(args)
+                return "isso não é json"
+            return super().__call__(args)
+
+    gh = GhInvalido({})
+    assert main(["--repo", "artemishub_docs", "--repo", "artemishub_rag"], gh=gh) == 1
+    assert "ERRO ArtemisHubApp/artemishub_docs: resposta inesperada do gh" in capsys.readouterr().err
+    assert any(c[:2] == ["label", "list"] and c[-len(c) :].count("ArtemisHubApp/artemishub_rag") for c in gh.chamadas)
+
+
 def test_main_sem_repo_usa_os_sete():
     gh = FakeGh({})
     main([], gh=gh)

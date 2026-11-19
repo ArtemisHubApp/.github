@@ -5,6 +5,8 @@ existe (`planejar`) e monta os argumentos do `gh` (`comando_gh`). Nunca apaga la
 Usa apenas a biblioteca padrão.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import shutil
@@ -104,7 +106,10 @@ def rodar_gh(args: list[str]) -> str:
 def listar(repo: str, gh: Gh) -> list[dict[str, str]]:
     """Labels existentes no repo (`ArtemisHubApp/<nome>`)."""
     saida = gh(["label", "list", "-R", repo, "--limit", "200", "--json", "name,color,description"])
-    return json.loads(saida)
+    try:
+        return json.loads(saida)
+    except ValueError as exc:
+        raise RuntimeError(f"resposta inesperada do gh: {exc}") from exc
 
 
 def _descrever(mudanca: Mudanca) -> str:
