@@ -67,3 +67,30 @@ def test_labels_dos_formularios_estao_no_padrao():
 def test_issue_em_branco_desligada():
     cfg = yaml.safe_load((FORMS / "config.yml").read_text(encoding="utf-8"))
     assert cfg["blank_issues_enabled"] is False and cfg["contact_links"]
+
+
+def test_template_de_pr_tem_o_checklist():
+    t = (ROOT / ".github/pull_request_template.md").read_text(encoding="utf-8")
+    for trecho in (
+        "Closes #",
+        "Conventional Commits",
+        "staging",
+        "docs/superpowers/",
+        "GitHub Pages",
+        "ADR",
+        "codigo-limpo.md",
+        "LGPD",
+        "- [ ] ",
+    ):
+        assert trecho in t
+
+
+def test_codeowners_de_exemplo_todo_comentado():
+    linhas = (ROOT / "exemplos/CODEOWNERS").read_text(encoding="utf-8").splitlines()
+    assert linhas and all(not ln.strip() or ln.lstrip().startswith("#") for ln in linhas)
+
+
+def test_readme_explica_labels_e_heranca():
+    t = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "python3 scripts/labels.py --apply" in t
+    assert "ISSUE_TEMPLATE" in t and "CODEOWNERS" in t
