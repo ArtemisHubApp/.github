@@ -1,0 +1,61 @@
+name: "Documentação"
+description: "Criar ou melhorar um texto"
+title: "docs: "
+labels: ["tipo: docs"]
+body:
+  - type: markdown
+    attributes:
+      value: "Diga qual texto precisa mudar. Uma issue, uma branch, um PR. Marque a semana no kanban."
+  - type: input
+    id: pagina
+    attributes:
+      label: Página ou arquivo
+      description: Caminho ou link do texto.
+    validations:
+      required: true
+  - type: textarea
+    id: o_que_muda
+    attributes:
+      label: "O que muda?"
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Critérios de aceite
+      description: Como saberemos que está pronto? Uma linha por item.
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: dropdown
+    id: semana
+    attributes:
+      label: Semana
+      description: Em que semana do roadmap isto entra?
+      options:
+        - Semana 1
+        - Semana 2
+        - Semana 3
+        - Semana 4
+        - Semana 5
+        - Semana 6
+        - Semana 7
+        - Backlog (sem semana)
+    validations:
+      required: true
+  - type: dropdown
+    id: repo
+    attributes:
+      label: Repositório afetado
+      description: Marque todos os repositórios que a tarefa toca.
+      multiple: true
+      options:
+        - artemishub_orchestration
+        - artemishub_docs
+        - artemishub_frontend
+        - artemishub_backend
+        - artemishub_agents
+        - artemishub_rag
+        - .github
+    validations:
+      required: true
