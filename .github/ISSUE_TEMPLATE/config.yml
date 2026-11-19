@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Como usamos o kanban
+    url: https://artemishubapp.github.io/artemishub_docs/guias/kanban/
+    about: Veja o guia antes de abrir uma issue.

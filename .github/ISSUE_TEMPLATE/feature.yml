@@ -1,0 +1,60 @@
+name: "Nova funcionalidade"
+description: "Algo novo que o Artemis deve fazer"
+title: "feat: "
+labels: ["tipo: feature"]
+body:
+  - type: markdown
+    attributes:
+      value: "Descreva a ideia em poucas palavras. Uma issue, uma branch, um PR. Marque a semana no kanban."
+  - type: textarea
+    id: objetivo
+    attributes:
+      label: "Que problema resolve e para quem?"
+    validations:
+      required: true
+  - type: textarea
+    id: fora_de_escopo
+    attributes:
+      label: "O que fica de fora?"
+    validations:
+      required: false
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Critérios de aceite
+      description: Como saberemos que está pronto? Uma linha por item.
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: dropdown
+    id: semana
+    attributes:
+      label: Semana
+      description: Em que semana do roadmap isto entra?
+      options:
+        - Semana 1
+        - Semana 2
+        - Semana 3
+        - Semana 4
+        - Semana 5
+        - Semana 6
+        - Semana 7
+        - Backlog (sem semana)
+    validations:
+      required: true
+  - type: dropdown
+    id: repo
+    attributes:
+      label: Repositório afetado
+      description: Marque todos os repositórios que a tarefa toca.
+      multiple: true
+      options:
+        - artemishub_orchestration
+        - artemishub_docs
+        - artemishub_frontend
+        - artemishub_backend
+        - artemishub_agents
+        - artemishub_rag
+        - .github
+    validations:
+      required: true

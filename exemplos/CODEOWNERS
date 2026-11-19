@@ -1,0 +1,11 @@
+# Exemplo de CODEOWNERS. O arquivo diz quem revisa cada parte do repo.
+# Ele NÃO é herdado da organização: copie para .github/CODEOWNERS em cada repo.
+# A última regra que casa com o arquivo vence.
+# O time preenche os logins; não deixe nomes de exemplo no arquivo final.
+#
+# Padrão: todo o repo
+# *  <login-da-dona>
+#
+# Uma pasta com outra responsável
+# /src/adapters/  <login>
+# /docs/  <login>
