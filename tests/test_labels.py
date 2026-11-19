@@ -1,6 +1,10 @@
+import json
 import re
+import shutil
+import subprocess
 
-from labels import Label, Mudanca, comando_gh, labels_padrao, planejar
+import pytest
+from labels import REPOS, Label, Mudanca, comando_gh, labels_padrao, main, planejar, rodar_gh
 
 SEM1 = Label("semana-1", "bfd4f2", "Roadmap: semana 1")
 
@@ -78,3 +82,63 @@ def test_comando_atualizar_renomeia_pelo_nome_atual():
         "-R",
         "ArtemisHubApp/artemishub_rag",
     ]
+
+
+class FakeGh:
+    def __init__(self, existentes, negados=()):
+        self.existentes = existentes
+        self.negados = set(negados)
+        self.chamadas = []
+
+    def __call__(self, args):
+        self.chamadas.append(args)
+        if self.negados & set(args):
+            raise RuntimeError("HTTP 403")
+        if args[:2] == ["label", "list"]:
+            repo = args[args.index("-R") + 1]
+            return json.dumps(self.existentes.get(repo, []))
+        return ""
+
+
+def test_main_sem_apply_so_lista(capsys):
+    gh = FakeGh({})
+    assert main(["--repo", "artemishub_rag"], gh=gh) == 0
+    assert all(c[:2] == ["label", "list"] for c in gh.chamadas)
+    assert "Ensaio: nada foi alterado" in capsys.readouterr().out
+
+
+def test_main_com_apply_cria_e_atualiza():
+    gh = FakeGh({"ArtemisHubApp/artemishub_rag": [{"name": "Semana-4", "color": "0E8A16", "description": ""}]})
+    assert main(["--apply", "--repo", "artemishub_rag"], gh=gh) == 0
+    escritas = [c for c in gh.chamadas if c[1] in ("create", "edit")]
+    assert ["label", "edit", "Semana-4"] == escritas[3][:3] and len(escritas) == 14  # 7 semanas + 3 + 4
+
+
+def test_main_continua_quando_um_repo_falha(capsys):
+    gh = FakeGh({}, negados={"ArtemisHubApp/artemishub_docs"})
+    assert main(["--apply", "--repo", "artemishub_docs", "--repo", "artemishub_rag"], gh=gh) == 1
+    assert any(c[-1] == "ArtemisHubApp/artemishub_rag" and c[1] == "create" for c in gh.chamadas)
+    assert "ERRO ArtemisHubApp/artemishub_docs: HTTP 403" in capsys.readouterr().err
+
+
+def test_main_sem_repo_usa_os_sete():
+    gh = FakeGh({})
+    main([], gh=gh)
+    assert [c[3] for c in gh.chamadas] == [f"ArtemisHubApp/{r}" for r in REPOS]
+
+
+def test_repo_desconhecido_e_recusado():
+    with pytest.raises(SystemExit):
+        main(["--repo", "kyte"], gh=FakeGh({}))
+
+
+def test_sem_gh_no_path_avisa(monkeypatch, capsys):
+    monkeypatch.setattr(shutil, "which", lambda _: None)
+    assert main([]) == 1
+    assert "gh não foi encontrado" in capsys.readouterr().err
+
+
+def test_rodar_gh_transforma_falha_em_runtimeerror(monkeypatch):
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 1, "", "HTTP 403"))
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        rodar_gh(["label", "list"])

@@ -5,6 +5,12 @@ existe (`planejar`) e monta os argumentos do `gh` (`comando_gh`). Nunca apaga la
 Usa apenas a biblioteca padrão.
 """
 
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -19,6 +25,8 @@ REPOS: tuple[str, ...] = (
     ".github",
 )
 SEMANAS: int = 7
+
+Gh = Callable[[list[str]], str]
 
 
 @dataclass(frozen=True)
@@ -78,3 +86,68 @@ def comando_gh(repo: str, mudanca: Mudanca) -> list[str]:
     else:
         base = ["label", "edit", mudanca.nome_atual or label.nome, "--name", label.nome]
     return [*base, "--color", label.cor, "--description", label.descricao, "-R", repo]
+
+
+def rodar_gh(args: list[str]) -> str:
+    """Roda `gh` e devolve o stdout; qualquer falha vira `RuntimeError` com o stderr."""
+    try:
+        resultado = subprocess.run(
+            ["gh", *args], check=False, capture_output=True, text=True, encoding="utf-8", timeout=60
+        )
+    except (OSError, subprocess.TimeoutExpired) as erro:
+        raise RuntimeError(str(erro)) from erro
+    if resultado.returncode != 0:
+        raise RuntimeError(resultado.stderr.strip() or f"gh saiu com código {resultado.returncode}")
+    return resultado.stdout
+
+
+def listar(repo: str, gh: Gh) -> list[dict[str, str]]:
+    """Labels existentes no repo (`ArtemisHubApp/<nome>`)."""
+    saida = gh(["label", "list", "-R", repo, "--limit", "200", "--json", "name,color,description"])
+    return json.loads(saida)
+
+
+def _descrever(mudanca: Mudanca) -> str:
+    if mudanca.acao == "criar":
+        return f"criar {mudanca.label.nome}"
+    return f"atualizar {mudanca.label.nome} (era {mudanca.nome_atual})"
+
+
+def sincronizar(repos: list[str], aplicar: bool, gh: Gh) -> int:
+    """Planeja (e com `aplicar`, executa) as mudanças em cada repo. Devolve 1 se algum falhou."""
+    falhou = False
+    for repo in repos:
+        print(f"== {repo}")
+        try:
+            mudancas = planejar(listar(repo, gh), labels_padrao())
+            for mudanca in mudancas:
+                print(f"  {_descrever(mudanca)}")
+                if aplicar:
+                    gh(comando_gh(repo, mudanca))
+            if not mudancas:
+                print("  sem mudanças")
+        except RuntimeError as erro:
+            print(f"ERRO {repo}: {erro}", file=sys.stderr)
+            falhou = True
+    if not aplicar:
+        print("Ensaio: nada foi alterado. Rode com --apply para aplicar.")
+    return 1 if falhou else 0
+
+
+def main(argv: list[str] | None = None, gh: Gh = rodar_gh) -> int:
+    parser = argparse.ArgumentParser(description="Sincroniza as labels padrão nos repos da org.")
+    parser.add_argument("--apply", action="store_true", help="aplica as mudanças (padrão: só mostra)")
+    parser.add_argument("--repo", action="append", choices=REPOS, metavar="NOME", help="repo a sincronizar (repetível)")
+    args = parser.parse_args(argv)
+    if gh is rodar_gh and shutil.which("gh") is None:
+        print(
+            "ERRO: gh não foi encontrado no PATH. Instale em https://cli.github.com e rode gh auth login.",
+            file=sys.stderr,
+        )
+        return 1
+    nomes = args.repo or list(REPOS)
+    return sincronizar([f"{ORG}/{nome}" for nome in nomes], args.apply, gh)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
